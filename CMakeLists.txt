@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.21.0)
+project("Scanline Renderer" VERSION 1.1.1 LANGUAGES C)
+set(CMAKE_C_STANDARD 99)
+set(PACKAGE_TARNAME "scanline-renderer")
+find_package(SDL2 2.26.5 REQUIRED)
+add_subdirectory("src")

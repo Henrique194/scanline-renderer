@@ -1,0 +1,28 @@
+#ifndef PALETTE_H
+#define PALETTE_H
+
+#include <SDL.h>
+
+typedef enum {
+    PAL_COLOR_BLACK,
+    PAL_COLOR_BLUE,
+    PAL_COLOR_GREEN,
+    PAL_COLOR_CYAN,
+    PAL_COLOR_RED,
+    PAL_COLOR_MAGENTA,
+    PAL_COLOR_BROWN,
+    PAL_COLOR_LIGHTGRAY,
+    PAL_COLOR_DARKGRAY,
+    PAL_COLOR_LIGHTBLUE,
+    PAL_COLOR_LIGHTGREEN,
+    PAL_COLOR_LIGHTCYAN,
+    PAL_COLOR_LIGHTRED,
+    PAL_COLOR_LIGHTMAGENTA,
+    PAL_COLOR_YELLOW,
+    PAL_COLOR_WHITE,
+    PAL_COLOR_NUM,
+} palette_color_t;
+
+void PAL_SetPalette(const SDL_Surface* buffer);
+
+#endif
