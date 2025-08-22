@@ -1,0 +1,11 @@
+{
+  "name": "scanline-renderer",
+  "version-string": "latest",
+  "dependencies": [
+    {
+      "name": "sdl2",
+      "version>=": "2.26.5"
+    }
+  ],
+  "builtin-baseline": "6ecbbbdf31cba47aafa7cf6189b1e73e10ac61f8"
+}
