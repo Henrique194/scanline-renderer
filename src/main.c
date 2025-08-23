@@ -28,13 +28,7 @@
    of Computer Graphics_, by Rogers, for further information.
 */
 
-#include <SDL.h>
-#include <stdlib.h>
-#include <math.h>
-#include "palette.h"
-
-#define INITIAL_DIB_WIDTH  320 // initial dimensions of DIB
-#define INITIAL_DIB_HEIGHT 240 //  into which we'll draw
+#include "video.h"
 
 // Assumes polygons have no more than four sides and are clipped a
 // maximum of four times by frustum. Must be increased for more sides
@@ -114,19 +108,10 @@ typedef struct edge_s {
     struct edge_s* pnextremove;
 } edge_t;
 
-static SDL_Window* window = NULL;
-static SDL_Surface* screen_buffer;
-static SDL_Surface* argb_buffer;
-static SDL_Renderer* renderer = NULL;
-static SDL_Texture* texture = NULL;
-static Uint8* pDIB = NULL; // pointers to DIB section we'll draw into
 static SDL_bool quit = SDL_FALSE;
 
 char szAppName[] = "Clip";           // The name of this application
 char szTitle[] = "3D clipping demo"; // The title bar text
-static int DIBWidth = INITIAL_DIB_WIDTH;
-static int DIBHeight = INITIAL_DIB_HEIGHT;
-static int DIBPitch = INITIAL_DIB_WIDTH;
 static double roll, pitch, yaw;
 static double currentspeed;
 static point_t currentpos;
@@ -182,8 +167,7 @@ static polygon_t polys2[] = {
     {6,
      4,
      {{0, 10, 0}, {20, 10, 0}, {10, 10, -10}, {0, 10, -10}},
-     {10, {0, 1, 0}}
-    },
+     {10, {0, 1, 0}}},
     {6,
      4,
      {{-10, 10, 10}, {0, 10, 10}, {0, 10, 0}, {-10, 10, 0}},
@@ -281,13 +265,12 @@ static int currentcolor;
 
 static void UpdateWorld(void);
 
-const Uint32 pixel_format = SDL_PIXELFORMAT_ARGB8888;
-
 /////////////////////////////////////////////////////////////////////
 // 3-D dot product.
 /////////////////////////////////////////////////////////////////////
 static double DotProduct(const point_t* vec1, const point_t* vec2) {
-    return vec1->v[0] * vec2->v[0] + vec1->v[1] * vec2->v[1] + vec1->v[2] * vec2->v[2];
+    return vec1->v[0] * vec2->v[0] + vec1->v[1] * vec2->v[1]
+           + vec1->v[2] * vec2->v[2];
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -296,7 +279,8 @@ static double DotProduct(const point_t* vec1, const point_t* vec2) {
 static void MConcat(double in1[3][3], double in2[3][3], double out[3][3]) {
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            out[i][j] = in1[i][0] * in2[0][j] + in1[i][1] * in2[1][j] + in1[i][2] * in2[2][j];
+            out[i][j] = in1[i][0] * in2[0][j] + in1[i][1] * in2[1][j]
+                        + in1[i][2] * in2[2][j];
         }
     }
 }
@@ -309,8 +293,10 @@ static void MConcat(double in1[3][3], double in2[3][3], double out[3][3]) {
 static void ProjectPolygon(const polygon_t* ppoly, polygon2D_t* ppoly2D) {
     for (int i = 0; i < ppoly->numverts; i++) {
         double zrecip = 1.0 / ppoly->verts[i].v[2];
-        ppoly2D->verts[i].x = ppoly->verts[i].v[0] * zrecip * maxscale + xcenter;
-        ppoly2D->verts[i].y = ycenter - (ppoly->verts[i].v[1] * zrecip * maxscale);
+        ppoly2D->verts[i].x =
+            ppoly->verts[i].v[0] * zrecip * maxscale + xcenter;
+        ppoly2D->verts[i].y =
+            ycenter - (ppoly->verts[i].v[1] * zrecip * maxscale);
     }
     ppoly2D->numverts = ppoly->numverts;
 }
@@ -388,7 +374,8 @@ static void UpdateViewPos(void) {
 static void BackRotateVector(const point_t* pin, point_t* pout) {
     // Rotate into the world orientation
     for (int i = 0; i < 3; i++) {
-        pout->v[i] = pin->v[0] * vright.v[i] + pin->v[1] * vup.v[i] + pin->v[2] * vpn.v[i];
+        pout->v[i] = pin->v[0] * vright.v[i] + pin->v[1] * vup.v[i]
+                     + pin->v[2] * vpn.v[i];
     }
 }
 
@@ -444,7 +431,8 @@ static int PolyFacesViewer(const polygon_t* ppoly, const plane_t* pplane) {
 static void SetWorldspaceClipPlane(point_t* normal, plane_t* plane) {
     // Rotate the plane normal into worldspace
     BackRotateVector(normal, &plane->normal);
-    plane->distance = DotProduct(&currentpos, &plane->normal) + CLIP_PLANE_EPSILON;
+    plane->distance =
+        DotProduct(&currentpos, &plane->normal) + CLIP_PLANE_EPSILON;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -568,12 +556,12 @@ static void AddPolygonEdges(const plane_t* plane, polygon2D_t* screenpoly) {
     for (i = 0; i < numverts; i++) {
         if (screenpoly->verts[i].x < -0.5)
             screenpoly->verts[i].x = -0.5;
-        if (screenpoly->verts[i].x > ((double) DIBWidth - 0.5))
-            screenpoly->verts[i].x = (double) DIBWidth - 0.5;
+        if (screenpoly->verts[i].x > (SCREEN_WIDTH - 0.5))
+            screenpoly->verts[i].x = SCREEN_WIDTH - 0.5;
         if (screenpoly->verts[i].y < -0.5)
             screenpoly->verts[i].y = -0.5;
-        if (screenpoly->verts[i].y > ((double) DIBHeight - 0.5))
-            screenpoly->verts[i].y = (double) DIBHeight - 0.5;
+        if (screenpoly->verts[i].y > (SCREEN_HEIGHT - 0.5))
+            screenpoly->verts[i].y = SCREEN_HEIGHT - 0.5;
     }
 
     // Add each edge in turn
@@ -687,7 +675,7 @@ static void ScanEdges(void) {
 
     edgetail.pnext = NULL; // mark edge of list
     edgetail.pprev = &edgehead;
-    edgetail.x = DIBWidth << 16; // right edge of screen
+    edgetail.x = SCREEN_WIDTH << 16; // right edge of screen
     edgetail.leading = 0;
     edgetail.psurf = &surfstack;
 
@@ -699,7 +687,7 @@ static void ScanEdges(void) {
     surfstack.zinv00 = -999999.0;
     surfstack.zinvstepx = surfstack.zinvstepy = 0.0;
 
-    for (y = 0; y < DIBHeight; y++) {
+    for (y = 0; y < SCREEN_HEIGHT; y++) {
         fy = (double) y;
 
         // Sort in any edges that start on this scan
@@ -853,8 +841,9 @@ static void ScanEdges(void) {
 // Draw all the spans that were scanned out.
 /////////////////////////////////////////////////////////////////////
 static void DrawSpans(void) {
+    Uint8* buffer = VID_GetScreenBuffer();
     for (span_t* span = spans; span->x != -1; span++) {
-        SDL_memset(pDIB + (DIBPitch * span->y) + span->x, span->color, span->count);
+        SDL_memset(buffer + (SCREEN_WIDTH * span->y) + span->x, span->color, span->count);
     }
 }
 
@@ -862,7 +851,7 @@ static void DrawSpans(void) {
 // Clear the lists of edges to add and remove on each scan line.
 /////////////////////////////////////////////////////////////////////
 static void ClearEdgeLists(void) {
-    for (int i = 0; i < DIBHeight; i++) {
+    for (int i = 0; i < SCREEN_HEIGHT; i++) {
         newedges[i].pnext = &maxedge;
         removeedges[i] = NULL;
     }
@@ -910,7 +899,8 @@ static void UpdateWorld(void) {
                     // Move the polygon's plane into viewspace
                     // First move it into worldspace (object relative)
                     tnormal = ppoly[i].plane.normal;
-                    plane.distance = ppoly[i].plane.distance + DotProduct(&pobject->center, &tnormal);
+                    plane.distance = ppoly[i].plane.distance
+                                     + DotProduct(&pobject->center, &tnormal);
                     // Now transform it into viewspace
                     // Determine the distance from the viewpont
                     plane.distance -= DotProduct(&currentpos, &tnormal);
@@ -932,60 +922,18 @@ static void UpdateWorld(void) {
 }
 
 
-static void Cleanup(void) {
-    if (screen_buffer) {
-        SDL_FreeSurface(screen_buffer);
-    }
-    if (argb_buffer) {
-        SDL_FreeSurface(argb_buffer);
-    }
-    if (texture) {
-        SDL_DestroyTexture(texture);
-    }
-    if (renderer) {
-        SDL_DestroyRenderer(renderer);
-    }
-    if (window) {
-        SDL_DestroyWindow(window);
-    }
-    SDL_Quit();
-}
-
-static void Render(void) {
-    // Update texture data.
-    SDL_Rect rect = {
-        .x = 0,
-        .y = 0,
-        .w = DIBWidth,
-        .h = DIBHeight,
-    };
-    SDL_LockTexture(texture, &rect, &argb_buffer->pixels, &argb_buffer->pitch);
-    SDL_LowerBlit(screen_buffer, &rect, argb_buffer, &rect);
-    SDL_UnlockTexture(texture);
-
-    // Clear the renderer's backbuffer to remove any previous contents.
-    SDL_RenderClear(renderer);
-
-    // Copy the updated texture to the backbuffer for rendering.
-    SDL_RenderCopy(renderer, texture, NULL, NULL);
-
-    // Present the backbuffer content to the screen.
-    SDL_RenderPresent(renderer);
-}
-
-
 static void HandleKeyUp(const SDL_KeyboardEvent* e) {
     switch (e->keysym.scancode) {
         case SDL_SCANCODE_MINUS:
             fieldofview *= 0.9;
-            xscreenscale = DIBWidth / fieldofview;
-            yscreenscale = DIBHeight / fieldofview;
+            xscreenscale = SCREEN_WIDTH / fieldofview;
+            yscreenscale = SCREEN_HEIGHT / fieldofview;
             maxscale = SDL_max(xscreenscale, yscreenscale);
             break;
         case SDL_SCANCODE_EQUALS:
             fieldofview *= 1.1;
-            xscreenscale = DIBWidth / fieldofview;
-            yscreenscale = DIBHeight / fieldofview;
+            xscreenscale = SCREEN_WIDTH / fieldofview;
+            yscreenscale = SCREEN_HEIGHT / fieldofview;
             maxscale = SDL_max(xscreenscale, yscreenscale);
             break;
         case SDL_SCANCODE_F:
@@ -1078,78 +1026,11 @@ void HandleEvents(void) {
     }
 }
 
-
-static void CreateRenderer(void) {
-    const int index = -1;
-    const Uint32 flags = SDL_RENDERER_TARGETTEXTURE;
-    renderer = SDL_CreateRenderer(window, index, flags);
-    SDL_RenderSetLogicalSize(renderer, 320, 240);
-    // Blank out the full screen area in case there is any junk in
-    // the borders that won't otherwise be overwritten.
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-    SDL_RenderPresent(renderer);
-}
-
-static void CreateWindow(void) {
-    const int x = SDL_WINDOWPOS_CENTERED;
-    const int y = SDL_WINDOWPOS_CENTERED;
-    const int w = DIBWidth;
-    const int h = DIBHeight;
-    const Uint32 flags = SDL_WINDOW_FULLSCREEN;
-    window = SDL_CreateWindow(szTitle, x, y, w, h, flags);
-    if (!window) {
-        const char* error = SDL_GetError();
-        printf("Error creating window for video startup: %s", error);
-    }
-    SDL_SetWindowMinimumSize(window, 320, 240);
-}
-
-static void AllocTexture(void) {
-    const int access = SDL_TEXTUREACCESS_STREAMING;
-    const int w = DIBWidth;
-    const int h = DIBHeight;
-    texture = SDL_CreateTexture(renderer, pixel_format, access, w, h);
-}
-
-static void AllocRgbaBuffer(void) {
-    const int w = DIBWidth;
-    const int h = DIBHeight;
-    const int depth = 0;
-    const int pitch = 0;
-    argb_buffer = SDL_CreateRGBSurfaceWithFormatFrom(NULL, w, h, depth, pitch, pixel_format);
-    SDL_FillRect(argb_buffer, NULL, 0);
-}
-
-static void AllocScreenBuffer(void) {
-    const Uint32 flags = 0;
-    const int w = DIBWidth;
-    const int h = DIBHeight;
-    const int depth = 8;
-    const Uint32 r_mask = 0;
-    const Uint32 g_mask = 0;
-    const Uint32 b_mask = 0;
-    const Uint32 a_mask = 0;
-
-    screen_buffer = SDL_CreateRGBSurface(flags, w, h, depth, r_mask, g_mask, b_mask, a_mask);
-    PAL_SetPalette(screen_buffer);
-    SDL_FillRect(screen_buffer, NULL, PAL_COLOR_BLACK);
-
-    pDIB = (Uint8*) screen_buffer->pixels;
-    DIBPitch = screen_buffer->pitch;
-}
-
 static SDL_bool InitInstance(void) {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+    if (!VID_Init()) {
+        printf("Could not initialize video! SDL_Error: %s\n", SDL_GetError());
         return SDL_FALSE;
     }
-    CreateWindow();
-    CreateRenderer();
-    AllocScreenBuffer();
-    AllocRgbaBuffer();
-    AllocTexture();
-    SDL_SetRelativeMouseMode(SDL_TRUE);
 
     // Set the initial location, direction, and speed
     roll = 0.0;
@@ -1160,12 +1041,12 @@ static SDL_bool InitInstance(void) {
     currentpos.v[1] = 0.0;
     currentpos.v[2] = 0.0;
     fieldofview = 2.0;
-    xscreenscale = DIBWidth / fieldofview;
-    yscreenscale = DIBHeight / fieldofview;
+    xscreenscale = SCREEN_WIDTH / fieldofview;
+    yscreenscale = SCREEN_HEIGHT / fieldofview;
     maxscale = SDL_max(xscreenscale, yscreenscale);
     maxscreenscaleinv = 1.0 / maxscale;
-    xcenter = DIBWidth / 2.0 - 0.5;
-    ycenter = DIBHeight / 2.0 - 0.5;
+    xcenter = SCREEN_WIDTH / 2.0 - 0.5;
+    ycenter = SCREEN_HEIGHT / 2.0 - 0.5;
 
     numobjects = SDL_arraysize(objects);
 
@@ -1173,7 +1054,7 @@ static SDL_bool InitInstance(void) {
     return SDL_TRUE; // We succeeded...
 }
 
-int main(void) {
+int main(int argc, char* argv[]) {
     if (!InitInstance()) {
         printf("Initialization failed!\n");
         return EXIT_FAILURE;
@@ -1181,9 +1062,9 @@ int main(void) {
     while (!quit) {
         HandleEvents();
         UpdateWorld();
-        Render();
+        VID_UpdateScreen();
         SDL_Delay(16); // ~60 FPS
     }
-    Cleanup();
+    VID_Shutdown();
     return EXIT_SUCCESS;
 }

@@ -2,6 +2,8 @@ set(SOURCE_FILES
     main.c
     palette.c
     palette.h
+    video.c
+    video.h
 )
 set(LIBS ${SDL2_LIBRARIES})
 
