@@ -1,4 +1,6 @@
 set(SOURCE_FILES
+    input.c
+    input.h
     main.c
     palette.c
     palette.h
