@@ -1,33 +1,3 @@
-/* clip.c
-
-   Win32 program to demonstrate z-sorted spans.
-
-   Derived from the VC++ generic sample application.
-   Tested with VC++ 2.0 running on Windows NT 3.5.
-
-   Note: in this implementation, polygon faces must not be
-   interpenetrating. Also, correct sorting is not guaranteed
-   if two polygonal objects butt up against each other. In other
-   words, each polygonal object must be made of a continuous,
-   non-self-intersecting skin, and polygonal objects must not
-   interpenetrate or touch in order for proper sorting to result.
-   More complex, slower sorting is required to make those cases
-   work reliably.
-
-   Note: polygon processing could be considerably more efficient
-   if polygons shared common edges and edges shared common vertices.
-   Also, indirection to vertices could be used to avoid having to
-   copy all the vertices during every clip test. Outcode-type
-   testing could be used to determine completely clipped or
-   unclipped polygons ahead of time, avoiding the need to clip and
-   copy entirely for such polygons. Outcode-type tests work best in
-   viewspace, with the frustum normalized so that the field of view
-   is 90 degrees, so simple compares, rather than dot products, can
-   be used to categorize points with respect to the frustum. See
-   _Computer Graphics_, by Foley & van Dam, or _Procedural Elements
-   of Computer Graphics_, by Rogers, for further information.
-*/
-
 #include "video.h"
 
 // Assumes polygons have no more than four sides and are clipped a
